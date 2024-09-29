@@ -36,6 +36,7 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
 ## メモ
+```bash
 mkdir image-uploader
 cd image-uploader
 npx create-next-app@latest .
@@ -46,3 +47,4 @@ npm run build
 
 echo "NEXT_PUBLIC_API_GATEWAY_ENDPOINT=https://<your-api-gateway-endpoint.execute-api.region.amazonaws.com>/<stage>" > .env.local
 
+```
