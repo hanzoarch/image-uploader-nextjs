@@ -1,8 +1,9 @@
-/**
- * @type {import('next').NextConfig}
- */
+/** @type {import('next').NextConfig} */
 const nextConfig = {
-  // ここに設定オプションを記述
+  output: 'standalone',
+  images: {
+    unoptimized: true,
+  },
 };
 
 export default nextConfig;
