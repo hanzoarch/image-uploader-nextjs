@@ -34,3 +34,15 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## メモ
+mkdir image-uploader
+cd image-uploader
+npx create-next-app@latest .
+npx shadcn@latest init
+npx shadcn@latest add button card alert
+npm install lucide-react
+npm run build
+
+echo "NEXT_PUBLIC_API_GATEWAY_ENDPOINT=https://<your-api-gateway-endpoint.execute-api.region.amazonaws.com>/<stage>" > .env.local
+
