@@ -1,0 +1,157 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: An AWS Serverless Application Model template for Lambda function, S3 bucket, and API Gateway.
+
+Parameters:
+  BucketNameSuffix:
+    Type: String
+    Description: Unique suffix for the S3 bucket name
+    Default: 'defaultsuffix'
+  LambdaCodeS3Bucket:
+    Type: String
+    Description: S3 bucket containing the Lambda function code
+  LambdaCodeS3Key:
+    Type: String
+    Description: S3 key for the Lambda function code (.zip file)
+
+Resources:
+  s3presigntokyo2nd:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: 
+        Bucket: !Ref LambdaCodeS3Bucket
+        Key: !Ref LambdaCodeS3Key
+      Description: ''
+      MemorySize: 128
+      Timeout: 10
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      EphemeralStorage:
+        Size: 512
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref S3Bucket002024awsdemo00zy1gM
+          REGION: !Ref AWS::Region
+          UPLOAD_PATH: upload
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 21600
+        MaximumRetryAttempts: 2
+      PackageType: Zip
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref S3Bucket002024awsdemo00zy1gM
+        - CloudWatchLogsFullAccess
+      RecursiveLoop: Terminate
+      SnapStart:
+        ApplyOn: None
+      RuntimeManagementConfig:
+        UpdateRuntimeOn: Auto
+
+  S3Bucket002024awsdemo00zy1gM:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      BucketName: !Sub '2024-aws-demo-${BucketNameSuffix}'
+      CorsConfiguration:
+        CorsRules:
+          - ExposedHeaders:
+              - ETag
+            AllowedMethods:
+              - PUT
+              - POST
+              - DELETE
+            AllowedOrigins:
+              - http://localhost:3000
+              - https://yourdomain.com
+              - '*'
+            AllowedHeaders:
+              - '*'
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  ApiGatewayRestApi00487w25l22k00MLGAC:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      ApiKeySourceType: HEADER
+      Description: s3presignapi
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      DisableExecuteApiEndpoint: false
+      Name: s3presignapi
+
+  ApiGatewayResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi00487w25l22k00MLGAC
+      ParentId: !GetAtt ApiGatewayRestApi00487w25l22k00MLGAC.RootResourceId
+      PathPart: 'presigned-url'
+
+  ApiGatewayMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: GET
+      ResourceId: !Ref ApiGatewayResource
+      RestApiId: !Ref ApiGatewayRestApi00487w25l22k00MLGAC
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - LambdaArn: !GetAtt s3presigntokyo2nd.Arn
+
+  ApiGatewayDeployment00un6do500dwCaB:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: ApiGatewayMethod
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi00487w25l22k00MLGAC
+
+  ApiGatewayStage00prod00KQkRd:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref ApiGatewayDeployment00un6do500dwCaB
+      StageName: prod
+      TracingEnabled: true
+      RestApiId: !Ref ApiGatewayRestApi00487w25l22k00MLGAC
+      MethodSettings:
+        - CacheTtlInSeconds: 300
+          LoggingLevel: INFO
+          ResourcePath: /*
+          CacheDataEncrypted: false
+          DataTraceEnabled: true
+          ThrottlingBurstLimit: 5000
+          CachingEnabled: false
+          MetricsEnabled: true
+          HttpMethod: '*'
+          ThrottlingRateLimit: 10000
+      CacheClusterSize: '0.5'
+      CacheClusterEnabled: false
+
+  LambdaApiGatewayInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt s3presigntokyo2nd.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayRestApi00487w25l22k00MLGAC}/*/*/*
+
+Outputs:
+  BucketName:
+    Description: Name of the created S3 bucket
+    Value: !Ref S3Bucket002024awsdemo00zy1gM
+  ApiEndpoint:
+    Description: API Gateway endpoint URL for Prod stage
+    Value: !Sub "https://${ApiGatewayRestApi00487w25l22k00MLGAC}.execute-api.${AWS::Region}.amazonaws.com/prod/presigned-url"
